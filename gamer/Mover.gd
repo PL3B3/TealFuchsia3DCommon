@@ -47,11 +47,20 @@ var ticks_since_on_floor := 0
 var ticks_since_on_wall := 0
 var velocity := Vector3()
 var is_grounded_query:PhysicsShapeQueryParameters
+var move_slice:Array
+
+# ------------------------------------------------------------------Network vars
+var move_buffer:PoolBuffer
 
 var last_frame_yaw := 0.0
 var avg_yaw_delta := 0.0
 
 func _ready():
+	init_grounded_query()
+
+	init_move_recording()
+
+func init_grounded_query():
 	slip_sphere = SphereShape.new()
 	slip_sphere.radius = slip_radius
 	
@@ -62,6 +71,26 @@ func _ready():
 		hurt_collider]
 	is_grounded_query.margin = 0.05
 	is_grounded_query.set_shape(slip_sphere)
+
+func init_move_recording():
+	move_slice = []
+	move_slice.resize(MOVE.size())
+	move_slice[MOVE.PROCESSED] = 0
+	move_slice[MOVE.JUMP] = 0
+	move_slice[MOVE.X_DIR] = 0
+	move_slice[MOVE.Z_DIR] = 0
+	move_slice[MOVE.LOOK] = Vector2(0.0, 0.0)
+	move_slice[MOVE.LOOK_DELTA] = 0
+
+	var move_stubs = []
+	move_stubs.resize(MOVE.size())
+	move_stubs[MOVE.PROCESSED] = PoolByteArray()
+	move_stubs[MOVE.JUMP] = PoolByteArray()
+	move_stubs[MOVE.X_DIR] = PoolByteArray()
+	move_stubs[MOVE.Z_DIR] = PoolByteArray()
+	move_stubs[MOVE.LOOK] = PoolVector2Array()
+	move_stubs[MOVE.LOOK_DELTA] = PoolByteArray()
+	move_buffer = PoolBuffer.new(move_stubs)
 
 func get_dist_to_ground():
 	"""
@@ -75,7 +104,7 @@ func get_dist_to_ground():
 	var cast_result = space_state.cast_motion(is_grounded_query, Vector3.DOWN)
 	return cast_result[0]
 
-func move(move_slice:Array, delta:float):
+func calculate_movement(delta:float):
 	var target_velocity = (
 		speed * (
 			move_slice[MOVE.X_DIR] * transform.basis.x +
@@ -118,8 +147,9 @@ func move(move_slice:Array, delta:float):
 	var vel_mag_sqr = vel_h_mag_sqr + pow(velocity.y, 2)
 	if vel_mag_sqr < speed_zero_limit and ticks_since_on_floor == 0:
 		velocity = Vector3()
-	else:
-		# Movement code proper
+
+func apply_movement():
+	if not velocity.is_equal_approx(Vector3()):
 		var slid_vel = move_and_slide(velocity, Vector3.UP, true)
 		velocity = slid_vel
 

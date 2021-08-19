@@ -4,16 +4,9 @@ class_name Gamer
 
 onready var target = preload("res://Common/game/Target.tscn")
 
-enum PHANTOM_STATE {
-	PROCESSED,
-	POSITION,
-	VELOCITY,
-	LOOK,
-	HEALTH}
-
 enum STATE {
-	POSITION, # record state @start of phys frame, before move/other changes
-	VELOCITY,
+	POSITION,
+	VELOCITY, # slid vel at end of previous frame
 	HEALTH,
 	FAST_CHARGE_TIME_LEFT,
 	SLOW_CHARGE_TIME_LEFT,
@@ -27,6 +20,7 @@ var buff_decay_rate := 5 # amount buff to decay every 0.5 seconds
 
 var recharge_rate := 6 # after this many ticks, we decrease the "time" left by 1
 var fast_recharge_time := 85
+var fast_max_charges := 1
 var slow_recharge_time := 255
 
 var ult_charge_max := 250 
@@ -43,12 +37,11 @@ var mouse_sensitivity := 0.04
 var jump_try_ticks_default := 3
 
 # --------------------------------------------------------------------Input vars
-var move_slice:Array
 var jump_try_ticks_remaining := 0
 
 # ------------------------------------------------------------------Network vars
 var state_buffer:PoolBuffer
-var move_buffer:PoolBuffer
+
 
 # ---------------------------------------------------------------Experiment Vars
 var raycast_this_physics_frame = false
@@ -57,29 +50,22 @@ var test_target
 var targets = []
 
 func _ready():
-	move_slice = []
-	move_slice.resize(MOVE.size())
-	move_slice[MOVE.PROCESSED] = 0
-	move_slice[MOVE.JUMP] = 0
-	move_slice[MOVE.X_DIR] = 0
-	move_slice[MOVE.Z_DIR] = 0
-	move_slice[MOVE.LOOK] = Vector2(0.0, 0.0)
-	move_slice[MOVE.LOOK_DELTA] = 0
-	
+	init_state_recording()
+
+	Network.client_gamer = self
+
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+func init_state_recording():
 	state_slice = []
 	state_slice.resize(STATE.size())
+	state_slice[STATE.POSITION] = transform.origin
+	state_slice[STATE.VELOCITY] = Vector3()
 	state_slice[STATE.HEALTH] = base_health
 	state_slice[STATE.ULT_CHARGE] = 0
 	state_slice[STATE.SLOW_CHARGE_TIME_LEFT] = 0
 	state_slice[STATE.FAST_CHARGE_TIME_LEFT] = 0
-	
-	init_pool_buffers()
 
-	Network.client_gamer = self
-	
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-
-func init_pool_buffers():
 	var state_stubs = []
 	state_stubs.resize(STATE.size())
 	state_stubs[STATE.POSITION] = PoolVector3Array()
@@ -89,16 +75,6 @@ func init_pool_buffers():
 	state_stubs[STATE.SLOW_CHARGE_TIME_LEFT] = PoolByteArray()
 	state_stubs[STATE.ULT_CHARGE] = PoolByteArray()
 	state_buffer = PoolBuffer.new(state_stubs)
-
-	var move_stubs = []
-	move_stubs.resize(MOVE.size())
-	move_stubs[MOVE.PROCESSED] = PoolByteArray()
-	move_stubs[MOVE.JUMP] = PoolByteArray()
-	move_stubs[MOVE.X_DIR] = PoolByteArray()
-	move_stubs[MOVE.Z_DIR] = PoolByteArray()
-	move_stubs[MOVE.LOOK] = PoolVector2Array()
-	move_stubs[MOVE.LOOK_DELTA] = PoolByteArray()
-	move_buffer = PoolBuffer.new(move_stubs)
 
 func setup_test_targets():
 	"""
@@ -149,11 +125,19 @@ func _unhandled_input(event):
 		jump_try_ticks_remaining = jump_try_ticks_default
 
 func _physics_process(delta):
-	record_move_slice()
-	
+	record_move()
+
+	record_state()
+
 	handle_networking()
-	
-	move(move_slice, delta)
+
+	calculate_movement(delta)
+
+	apply_movement()
+
+	calculate_next_move()
+
+	calculate_next_state()
 
 func handle_raycast():
 	if raycast_this_physics_frame:
@@ -177,12 +161,14 @@ func handle_raycast():
 		# 	target_to_shoot.transform.origin = target_position
 		raycast_this_physics_frame = false
 
-func record_move_slice():
-	# --------save last move slice
-	var temp_last_move_slice = move_slice.duplicate()
+func record_move():
 	move_buffer.write(
 		move_slice,
-		Network.physics_tick_id - 1)
+		Network.physics_tick_id)
+
+func calculate_next_move(): # get move to process this phys frame
+	# --------for calc look_delta
+	var last_look = move_slice[MOVE.LOOK]
 	
 	move_slice[MOVE.PROCESSED] = 1
 	
@@ -208,8 +194,42 @@ func record_move_slice():
 	move_slice[MOVE.LOOK] = Vector2(yaw, pitch)
 	
 	move_slice[MOVE.LOOK_DELTA] = int(
-		temp_last_move_slice[MOVE.LOOK].is_equal_approx(
+		last_look.is_equal_approx(
 			move_slice[MOVE.LOOK]))
+
+func record_state(): # state @start of phys frame, before move/other changes
+	state_buffer.write(
+		state_slice,
+		Network.physics_tick_id)
+
+func calculate_next_state():
+	var fast_time_left = state_slice[STATE.FAST_CHARGE_TIME_LEFT] 
+	if fast_time_left > 0:
+		if fast_recharge_ticks_left == 0:
+			state_slice[STATE.FAST_CHARGE_TIME_LEFT] -= 1
+			fast_recharge_ticks_left = recharge_rate
+		else:
+			fast_recharge_ticks_left -= 1
+
+	var slow_time_left = state_slice[STATE.SLOW_CHARGE_TIME_LEFT]
+	if slow_time_left > 0:
+		if slow_recharge_ticks_left == 0:
+			state_slice[STATE.SLOW_CHARGE_TIME_LEFT] -= 1
+			slow_recharge_ticks_left = recharge_rate
+		else:
+			slow_recharge_ticks_left -= 1
+
+	state_slice[STATE.POSITION] = transform.origin
+
+	state_slice[STATE.VELOCITY] = velocity
+
+func get_fast_charges_stored() -> int:
+	var fast_charge_time_stored:int = (
+		(fast_recharge_time * fast_max_charges) - 
+		state_slice[STATE.FAST_CHARGE_TIME_LEFT])
+	
+
+	return fast_charge_time_stored / fast_recharge_time
 
 func handle_networking():
 	pass
