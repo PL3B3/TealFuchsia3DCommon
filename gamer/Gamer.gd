@@ -1,5 +1,3 @@
-# update from submodule
-
 extends Mover
 
 class_name Gamer
