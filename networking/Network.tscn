@@ -25,6 +25,5 @@ text = "Client"
 [node name="Camera2D" type="Camera2D" parent="."]
 current = true
 zoom = Vector2( 0.2, 0.2 )
-
 [connection signal="pressed" from="ButtonServer" to="." method="_on_ButtonServer_pressed"]
 [connection signal="pressed" from="ButtonClient" to="." method="_on_ButtonClient_pressed"]

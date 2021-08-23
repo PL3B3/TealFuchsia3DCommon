@@ -2,7 +2,7 @@
 
 [ext_resource path="res://common/gamer/Gamer.gd" type="Script" id=1]
 
-[sub_resource type="SphereShape" id=5]
+[sub_resource type="SphereShape" id=1]
 
 [sub_resource type="SphereShape" id=2]
 
@@ -13,29 +13,26 @@ albedo_color = Color( 0.333333, 0.792157, 0.760784, 1 )
 
 [node name="Gamer" type="KinematicBody"]
 script = ExtResource( 1 )
-visual_root_path = NodePath("VisualRoot")
-camera_path = NodePath("VisualRoot/Camera")
+camera_path = NodePath("Camera")
 move_collider_path = NodePath("MoveCollider")
 hurt_collider_path = NodePath("HurtCollider")
 
 [node name="MoveCollider" type="CollisionShape" parent="."]
-shape = SubResource( 5 )
+shape = SubResource( 1 )
 
 [node name="HurtCollider" type="CollisionShape" parent="."]
 visible = false
 shape = SubResource( 2 )
 disabled = true
 
-[node name="VisualRoot" type="Spatial" parent="."]
-
-[node name="Meshes" type="Spatial" parent="VisualRoot"]
-
-[node name="Body" type="MeshInstance" parent="VisualRoot/Meshes"]
-material_override = SubResource( 3 )
-mesh = SubResource( 4 )
-material/0 = null
-
-[node name="Camera" type="Camera" parent="VisualRoot"]
+[node name="Camera" type="Camera" parent="."]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.528439, 0 )
 keep_aspect = 0
 fov = 105.0
+
+[node name="Meshes" type="Spatial" parent="."]
+
+[node name="Body" type="MeshInstance" parent="Meshes"]
+material_override = SubResource( 3 )
+mesh = SubResource( 4 )
+material/0 = null
