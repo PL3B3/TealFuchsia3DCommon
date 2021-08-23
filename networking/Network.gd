@@ -61,11 +61,6 @@ func _ready():
 #	pb.test()
 #	gaming(PoolByteArray())
 
-func gaming(thing):
-	thing.resize(1)
-	thing[0] = 120
-	print(thing[0])
-
 func start_network(is_server: bool):
 	net_peer = NetworkedMultiplayerENet.new()
 	
@@ -122,7 +117,7 @@ func _on_custom_packet_received(id:int, packet:PoolByteArray):
 		client_gamer.network_mover.receive_move_packet(id, packet)
 
 func _physics_process(delta):
-	physics_tick_id = (physics_tick_id + 1) % physics_tick_id_MAX
+	physics_tick_id = (physics_tick_id + 1) & physics_tick_id_MAX
 
 func has_connected_peer() -> bool:
 	var is_connected = false

@@ -33,7 +33,7 @@ var slow_recharge_ticks_left := 0 # set=recharge_rate on ability press
 
 
 # ----------------------------------------------------------------Input settings
-var mouse_sensitivity := 0.04
+var mouse_sensitivity := 0.02
 var jump_try_ticks_default := 3
 
 # --------------------------------------------------------------------Input vars

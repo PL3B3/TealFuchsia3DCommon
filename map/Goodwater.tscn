@@ -1,8 +1,8 @@
 [gd_scene load_steps=7 format=2]
 
-[ext_resource path="res://Materials/seamless_wood_tx.jpg" type="Texture" id=1]
-[ext_resource path="res://Common/gamer/Gamer.tscn" type="PackedScene" id=2]
-[ext_resource path="res://Materials/StoneWallMaterial.tres" type="Material" id=3]
+[ext_resource path="res://common/materials/seamless_wood_tx.jpg" type="Texture" id=1]
+[ext_resource path="res://movement/TestGamer.tscn" type="PackedScene" id=2]
+[ext_resource path="res://common/materials/StoneWallMaterial.tres" type="Material" id=3]
 
 [sub_resource type="CubeMesh" id=1]
 
@@ -20,9 +20,6 @@ uv1_triplanar = true
 transform = Transform( 1, 0, 0, 0, 0.884402, 0.466726, 0, -0.466726, 0.884402, 0, 8.36841, 0 )
 light_color = Color( 0.972549, 0.870588, 0.764706, 1 )
 directional_shadow_mode = 0
-
-[node name="Gamer" parent="." instance=ExtResource( 2 )]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 8.58796, 5.45486, 0 )
 
 [node name="Bounds" type="Spatial" parent="."]
 
@@ -80,3 +77,6 @@ shape = SubResource( 3 )
 
 [node name="Camera" type="Camera" parent="."]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 15.5168, 5.21725, 3.93418 )
+
+[node name="TestGamer" parent="." instance=ExtResource( 2 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 1.493, 2.29137, 0 )

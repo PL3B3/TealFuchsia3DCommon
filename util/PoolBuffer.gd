@@ -34,9 +34,6 @@ func _init(stubs:Array=[]):
 		var arr = stubs[i] # need to copy poolarray to var to properly resize
 		arr.resize(id_max_size)
 		pools.push_back(arr)
-	
-	for pool in pools:
-		print(pool[100])
 
 # ----------------------------------------------------------------Writing Slices
 
@@ -151,8 +148,7 @@ func read_subslice(idx:int, sub_indices:PoolIntArray) -> Array:
 	return subslice
 
 func read_var(var_idx:int, idx:int):
-	var slice = read(idx)
-	return slice[get_normalized_var_idx(var_idx)]
+	return pools[get_normalized_var_idx(var_idx)][get_normalized_idx(idx)]
 
 # -----------------------------------------------------------------idx Utility
 

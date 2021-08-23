@@ -10,9 +10,11 @@ enum MOVE { # move instruc
 	LOOK, # yaw and pitch
 	LOOK_DELTA} # did look change since last frame	
 
+export(NodePath) var visual_root_path:NodePath
 export(NodePath) var camera_path:NodePath
 export(NodePath) var move_collider_path:NodePath
 export(NodePath) var hurt_collider_path:NodePath
+onready var visual_root = get_node(visual_root_path)
 onready var camera:Camera = get_node(camera_path)
 onready var move_collider:CollisionShape = get_node(move_collider_path)
 onready var hurt_collider:CollisionShape = get_node(hurt_collider_path)
@@ -126,13 +128,11 @@ func calculate_movement(delta:float):
 		ticks_since_last_jump = 0
 	
 	if is_on_floor():
-		print("floored")
+#		print("floored")
 		velocity -= gravity * get_floor_normal()
-		if abs(velocity.y) < 0.05:
-			velocity.y = 0
 		ticks_since_on_floor = 0
 	else:
-		print("air")
+#		print("air")
 		velocity -= gravity * Vector3.UP
 		ticks_since_on_floor += 1
 	
@@ -143,7 +143,7 @@ func calculate_movement(delta:float):
 		var h_scale_fac = sqrt(h_speed_limit_sqr / vel_h_mag_sqr)
 		velocity.x *= h_scale_fac
 		velocity.z *= h_scale_fac
-	
+
 	var vel_mag_sqr = vel_h_mag_sqr + pow(velocity.y, 2)
 	if vel_mag_sqr < speed_zero_limit and ticks_since_on_floor == 0:
 		velocity = Vector3()
